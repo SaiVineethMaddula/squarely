@@ -8,12 +8,7 @@ test('create a group, split expenses, join via invite, settle up', async ({ brow
 
   // --- Anu creates the group and adds placeholders for Ravi and Chetan
   const anu = await (await browser.newContext()).newPage()
-  await signIn(anu, anuEmail)
-  await anu.getByRole('link', { name: 'Account' }).click()
-  await anu.getByLabel('Your name').fill('Anu')
-  await anu.getByRole('button', { name: 'Save' }).click()
-  await expect(anu.getByText('Saved.')).toBeVisible()
-  await anu.getByRole('link', { name: 'Back' }).click()
+  await signIn(anu, anuEmail, '/', 'Anu')
 
   await anu.getByRole('button', { name: '+ New group' }).click()
   await anu.getByPlaceholder('e.g. Goa Trip, Flat 4B').fill('Goa Trip')
@@ -51,7 +46,7 @@ test('create a group, split expenses, join via invite, settle up', async ({ brow
 
   // --- Ravi opens the invite link, signs in, and claims his placeholder
   const ravi = await (await browser.newContext()).newPage()
-  await signIn(ravi, raviEmail, new URL(inviteUrl).pathname)
+  await signIn(ravi, raviEmail, new URL(inviteUrl).pathname, 'Ravi')
   await expect(ravi.getByRole('heading', { name: 'Goa Trip' })).toBeVisible()
   await ravi.screenshot({ path: 'test-results/ravi-join.png', fullPage: true })
   await ravi.getByText("I'm Ravi").click()
@@ -75,4 +70,14 @@ test('create a group, split expenses, join via invite, settle up', async ({ brow
   await expect(anu.getByText('Chetan pays Anu ₹1,300')).toBeVisible()
   await anu.getByRole('button', { name: 'expenses' }).click()
   await anu.screenshot({ path: 'test-results/anu-expenses.png', fullPage: true })
+
+  // Renaming yourself in Account updates the name everyone sees in the group
+  await ravi.getByRole('link', { name: 'Back' }).click()
+  await ravi.getByRole('link', { name: 'Account' }).click()
+  await ravi.getByLabel('Your name').fill('Ravi Kumar')
+  await ravi.getByRole('button', { name: 'Save' }).click()
+  await expect(ravi.getByText('Saved.')).toBeVisible()
+  await anu.reload()
+  await anu.getByRole('button', { name: 'balances' }).click()
+  await expect(anu.getByText('Ravi Kumar', { exact: true })).toBeVisible()
 })

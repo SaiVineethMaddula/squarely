@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(30);
+select plan(34);
 
 -- Fake users: Anu creates the group, Ravi joins, Mallory is an outsider.
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -176,6 +176,20 @@ select pg_temp.act_as('33333333-3333-3333-3333-333333333333');
 select lives_ok(
   $$ select join_group((select v from ctx where k = 'code'), (select v::uuid from ctx where k = 'chetan')) $$,
   'a new user can claim the Chetan placeholder');
+select is((select display_name from group_members where id = (select v::uuid from ctx where k = 'chetan')),
+          'mallory', 'claiming a placeholder shows the claimer''s Account name');
+
+-------------------------------------------------------------------------------
+-- Renaming yourself in Account updates every group you're in
+-------------------------------------------------------------------------------
+select pg_temp.act_as('22222222-2222-2222-2222-222222222222');
+select lives_ok($$ update profiles set display_name = 'Ravi Kumar' where id = auth.uid() $$,
+                'Ravi renames himself');
+select is((select display_name from group_members where user_id = auth.uid()),
+          'Ravi Kumar', 'the new name shows in his group');
+select throws_ok(
+  $$ select sync_member_names() $$,
+  '42501', null, 'the name-sync helper is not callable by users');
 
 select pg_temp.act_as('11111111-1111-1111-1111-111111111111');
 select lives_ok($$ select unclaim_member((select v::uuid from ctx where k = 'chetan')) $$,

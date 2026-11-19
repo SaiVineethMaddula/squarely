@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { formatINR } from '../lib/money'
 import { errorMessage } from '../lib/supabase'
 
+// `field` (in index.css) removes the phone's built-in look for date pickers and
+// dropdowns, so every input is the same height and fits its column.
 export const inputClass =
-  'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base outline-none ' +
+  'field block w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base outline-none ' +
   'focus:border-brand-600 focus:ring-2 focus:ring-brand-100 disabled:bg-slate-100'
 
 export function Screen({

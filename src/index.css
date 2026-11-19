@@ -20,6 +20,40 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+ * Phones draw date pickers and dropdowns their own way: iPhone gives the date
+ * box a minimum width that can spill into the next column, and a different
+ * height from text boxes. Reset them so all fields look and size the same.
+ */
+.field {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2.875rem;
+  line-height: 1.5rem;
+}
+.field[type='date'] {
+  display: flex;
+  align-items: center;
+}
+.field[type='date']::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+.field[type='date']::-webkit-datetime-edit {
+  padding: 0;
+}
+select.field {
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath d='M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.1rem;
+}
+/* Big amount box on Add expense keeps its larger size. */
+.field.text-2xl {
+  height: 3.5rem;
+}
+
 /* Respect the iPhone notch / home bar when installed to the home screen. */
 .safe-top {
   padding-top: env(safe-area-inset-top);

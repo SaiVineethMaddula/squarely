@@ -335,7 +335,7 @@ export function useUpdateProfile(userId: string) {
       check(
         await supabase
           .from('profiles')
-          .update({ display_name: displayName })
+          .update({ display_name: displayName, name_confirmed: true })
           .eq('id', userId)
           .select()
           .single(),

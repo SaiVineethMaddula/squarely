@@ -80,7 +80,7 @@ function SettleUp({ data }: { data: GroupData }) {
 
       <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-200 p-4">
         <h2 className="font-semibold text-slate-700">Record a payment</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
           <Field label="Who paid">
             <select className={inputClass} value={from} onChange={(e) => setFrom(e.target.value)}>
               {active.map((m) => <option key={m.id} value={m.id}>{m.display_name}</option>)}
@@ -92,7 +92,7 @@ function SettleUp({ data }: { data: GroupData }) {
             </select>
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
           <Field label="Amount (₹)">
             <input required inputMode="decimal" className={inputClass} value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder="0" />
           </Field>

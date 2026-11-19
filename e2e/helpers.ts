@@ -17,7 +17,8 @@ async function latestCode(email: string): Promise<string> {
   throw new Error(`No sign-in code arrived for ${email}`)
 }
 
-export async function signIn(page: Page, email: string, path = '/') {
+/** Signs in with a brand-new email, answering the one-time name prompt with `name`. */
+export async function signIn(page: Page, email: string, path = '/', name = email.split('@')[0]) {
   await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`, { method: 'DELETE' })
   await page.goto(path)
   await page.getByLabel('Email').fill(email)
@@ -26,4 +27,8 @@ export async function signIn(page: Page, email: string, path = '/') {
   await page.getByLabel('Sign-in code').fill(code)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page.getByText('Sign-in code')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: "What's your name?" })).toBeVisible()
+  await page.getByLabel('Your name').fill(name)
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(page.getByRole('heading', { name: "What's your name?" })).toHaveCount(0)
 }

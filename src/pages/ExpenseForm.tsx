@@ -164,7 +164,7 @@ function ExpenseForm({ data, existing }: { data: GroupData; existing?: Expense }
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
             <Field label="Date">
               <input type="date" required className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
