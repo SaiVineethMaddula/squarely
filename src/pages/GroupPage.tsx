@@ -82,7 +82,20 @@ export default function GroupPage() {
 }
 
 function useNames(data: GroupData) {
-  return useMemo(() => new Map(data.members.map((m) => [m.id, m.display_name])), [data.members])
+  return useMemo(
+    () => new Map(data.members.map((m) => [m.id, m.left_at ? `${m.display_name} (left)` : m.display_name])),
+    [data.members],
+  )
+}
+
+function paidByText(e: GroupData['expenses'][number], names: Map<string, string>): string {
+  const payers = e.expense_payers
+  if (payers.length === 0) return `${formatINR(e.amount_paise)}`
+  if (payers.length === 1) return `${names.get(payers[0].member_id) ?? '?'} paid ${formatINR(e.amount_paise)}`
+  if (payers.length === 2) {
+    return `${names.get(payers[0].member_id)} & ${names.get(payers[1].member_id)} paid ${formatINR(e.amount_paise)}`
+  }
+  return `${payers.length} people paid ${formatINR(e.amount_paise)}`
 }
 
 function ExpenseList({ data, myMemberId }: { data: GroupData; myMemberId?: string }) {
@@ -114,7 +127,6 @@ function ExpenseList({ data, myMemberId }: { data: GroupData; myMemberId?: strin
           )
         }
         const e = row.item
-        const payer = e.expense_payers[0]
         const myShare = e.expense_splits.find((s) => s.member_id === myMemberId)?.amount_paise ?? 0
         const myPaid = e.expense_payers.find((p) => p.member_id === myMemberId)?.amount_paise ?? 0
         const mine = myPaid - myShare
@@ -124,9 +136,7 @@ function ExpenseList({ data, myMemberId }: { data: GroupData; myMemberId?: strin
               <span className="w-12 shrink-0 text-xs text-slate-400">{formatDate(e.expense_date)}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{e.description}</span>
-                <span className="text-sm text-slate-500">
-                  {payer ? names.get(payer.member_id) : '?'} paid {formatINR(e.amount_paise)}
-                </span>
+                <span className="block truncate text-sm text-slate-500">{paidByText(e, names)}</span>
               </span>
               {mine === 0 ? (
                 <span className="text-xs text-slate-400">not involved</span>
@@ -200,6 +210,9 @@ function describe(a: Activity, names: Map<string, string>): string {
     case 'member:joined': return `${p.name} joined`
     case 'member:claimed': return `joined as ${p.name}`
     case 'member:unclaimed': return `unlinked ${p.name}`
+    case 'member:left': return `left the group`
+    case 'member:rejoined': return `rejoined the group`
+    case 'member:removed': return `removed ${p.name}`
     case 'expense:created': return `added “${p.description}” (${amount})`
     case 'expense:updated': return `edited “${p.description}” (${amount})`
     case 'expense:deleted': return `deleted “${p.description}” (${amount})`

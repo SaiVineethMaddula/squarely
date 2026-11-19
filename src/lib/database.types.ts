@@ -281,14 +281,17 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "_log":
+            "_assert_left_members_settled":
+{ Args: { "p_group_id": string }; Returns: undefined
+                           },
+"_log":
 { Args: { "p_action": string,"p_entity_id": string,"p_entity_type": string,"p_group_id": string,"p_payload": Json }; Returns: undefined
                            },
 "_require_user":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "_write_expense_lines":
-{ Args: { "p_amount": number,"p_expense_id": string,"p_group_id": string,"p_payers": Json,"p_splits": Json }; Returns: undefined
+{ Args: { "p_allow_left"?: (string)[],"p_amount": number,"p_expense_id": string,"p_group_id": string,"p_payers": Json,"p_splits": Json }; Returns: undefined
                            },
 "add_placeholder_member":
 { Args: { "p_display_name": string,"p_group_id": string }; Returns: string
@@ -301,6 +304,9 @@ isOneToOne: false
                            },
 "delete_expense":
 { Args: { "p_expense_id": string }; Returns: undefined
+                           },
+"delete_group":
+{ Args: { "p_group_id": string }; Returns: undefined
                            },
 "delete_settlement":
 { Args: { "p_settlement_id": string }; Returns: undefined
@@ -317,8 +323,14 @@ isOneToOne: false
 "join_group":
 { Args: { "p_claim_member_id"?: string,"p_invite_code": string }; Returns: string
                            },
+"leave_group":
+{ Args: { "p_group_id": string }; Returns: undefined
+                           },
 "record_settlement":
 { Args: { "p_amount_paise": number,"p_from_member": string,"p_group_id": string,"p_note"?: string,"p_settled_on"?: string,"p_to_member": string }; Returns: string
+                           },
+"remove_member":
+{ Args: { "p_member_id": string }; Returns: undefined
                            },
 "shares_group_with":
 { Args: { "p_user_id": string }; Returns: boolean

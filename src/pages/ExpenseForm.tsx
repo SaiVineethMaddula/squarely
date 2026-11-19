@@ -48,6 +48,8 @@ function ExpenseForm({ data, existing }: { data: GroupData; existing?: Expense }
       existing?.expense_payers.some((p) => p.member_id === m.id),
   )
   const me = data.members.find((m) => m.user_id === userId)
+  const label = (m: (typeof members)[number]) =>
+    m.id === me?.id ? `${m.display_name} (you)` : m.left_at ? `${m.display_name} (left)` : m.display_name
   const canEdit = !existing || existing.created_by === userId
   const creatorName =
     data.members.find((m) => m.user_id === existing?.created_by)?.display_name ?? 'someone else'
@@ -57,6 +59,11 @@ function ExpenseForm({ data, existing }: { data: GroupData; existing?: Expense }
   const [date, setDate] = useState(existing?.expense_date ?? todayISO())
   const [category, setCategory] = useState(existing?.category ?? '')
   const [payer, setPayer] = useState(existing?.expense_payers[0]?.member_id ?? me?.id ?? members[0]?.id ?? '')
+  // "More than one person paid": an amount per person instead of one payer.
+  const [multiPayer, setMultiPayer] = useState((existing?.expense_payers.length ?? 0) > 1)
+  const [payerValues, setPayerValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries((existing?.expense_payers ?? []).map((p) => [p.member_id, String(p.amount_paise / 100)])),
+  )
   const [splitType, setSplitType] = useState<SplitType>((existing?.split_type as SplitType) ?? 'equal')
 
   // Equal: who's included. Others: a value per member (₹, %, or shares).
@@ -74,6 +81,23 @@ function ExpenseForm({ data, existing }: { data: GroupData; existing?: Expense }
   })
 
   const amount = parseRupees(amountText)
+
+  const paid = useMemo(() => {
+    if (!amount) return { payers: null as Record<string, number> | null, entered: 0, error: null as string | null }
+    if (!multiPayer) return { payers: { [payer]: amount }, entered: amount, error: null }
+    const payers: Record<string, number> = {}
+    let entered = 0
+    for (const m of members) {
+      const text = payerValues[m.id]?.trim()
+      if (!text) continue
+      const p = parseRupees(text)
+      if (p === null) return { payers: null, entered, error: `Check the amount ${m.display_name} paid` }
+      if (p > 0) payers[m.id] = p
+      entered += p
+    }
+    if (entered !== amount) return { payers: null, entered, error: null }
+    return { payers, entered, error: null }
+  }, [amount, multiPayer, payer, payerValues, members])
 
   const preview = useMemo(() => {
     if (!amount) return { error: null as string | null, result: null as Record<string, number> | null, assigned: 0 }
@@ -106,7 +130,7 @@ function ExpenseForm({ data, existing }: { data: GroupData; existing?: Expense }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (!amount || !preview.result || !('split' in preview) || !preview.split) return
+    if (!amount || !paid.payers || !preview.result || !('split' in preview) || !preview.split) return
     await save.mutateAsync({
       expenseId: existing?.id,
       input: {
@@ -115,7 +139,7 @@ function ExpenseForm({ data, existing }: { data: GroupData; existing?: Expense }
         date,
         category,
         split: preview.split,
-        payerMemberId: payer,
+        payers: paid.payers,
         splitAmounts: preview.result,
       },
     })
@@ -176,15 +200,59 @@ function ExpenseForm({ data, existing }: { data: GroupData; existing?: Expense }
             </Field>
           </div>
 
-          <Field label="Paid by">
-            <select className={inputClass} value={payer} onChange={(e) => setPayer(e.target.value)}>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.id === me?.id ? `${m.display_name} (you)` : m.display_name}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-sm font-medium text-slate-600">Paid by</span>
+              <button
+                type="button"
+                className="text-sm font-medium text-brand-700"
+                onClick={() => {
+                  if (!multiPayer && amount && !Object.keys(payerValues).length) {
+                    setPayerValues({ [payer]: String(amount / 100) })
+                  }
+                  setMultiPayer(!multiPayer)
+                }}
+              >
+                {multiPayer ? 'Just one person paid' : 'More than one person paid'}
+              </button>
+            </div>
+            {multiPayer ? (
+              <>
+                <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+                  {members.map((m) => (
+                    <li key={m.id} className="flex items-center gap-3 px-3 py-2">
+                      <span className="min-w-0 flex-1 truncate">{label(m)}</span>
+                      <span className="text-sm text-slate-400">₹</span>
+                      <input
+                        inputMode="decimal"
+                        aria-label={`Amount ${m.display_name} paid`}
+                        className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-right"
+                        placeholder="0"
+                        value={payerValues[m.id] ?? ''}
+                        onChange={(e) => setPayerValues({ ...payerValues, [m.id]: e.target.value })}
+                      />
+                    </li>
+                  ))}
+                </ul>
+                {amount && (
+                  <p className={`mt-2 text-sm ${paid.error ? 'text-red-700' : 'text-slate-600'}`}>
+                    {paid.error ?? (
+                      <>
+                        {formatINR(paid.entered)} of {formatINR(amount)} entered ·{' '}
+                        <strong>{formatINR(amount - paid.entered)} left</strong>
+                      </>
+                    )}
+                  </p>
+                )}
+              </>
+            ) : (
+              <select aria-label="Paid by" className={inputClass} value={payer} onChange={(e) => setPayer(e.target.value)}>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>{label(m)}</option>
+                ))}
+              </select>
+            )}
+          </div>
 
           <div>
             <span className="mb-1 block text-sm font-medium text-slate-600">Split</span>
@@ -217,11 +285,11 @@ function ExpenseForm({ data, existing }: { data: GroupData; existing?: Expense }
                           setIncluded(next)
                         }}
                       />
-                      <span className="flex-1">{m.display_name}</span>
+                      <span className="flex-1">{label(m)}</span>
                     </label>
                   ) : (
                     <>
-                      <span className="flex-1">{m.display_name}</span>
+                      <span className="min-w-0 flex-1 truncate">{label(m)}</span>
                       <span className="text-sm text-slate-400">{valueSuffix}</span>
                       <input
                         inputMode="decimal"
@@ -260,7 +328,7 @@ function ExpenseForm({ data, existing }: { data: GroupData; existing?: Expense }
 
         {canEdit && (
           <div className="flex gap-2 pb-4">
-            <Button type="submit" className="flex-1" loading={save.isPending} disabled={!amount || !preview.result || !description.trim()}>
+            <Button type="submit" className="flex-1" loading={save.isPending} disabled={!amount || !paid.payers || !preview.result || !description.trim()}>
               {existing ? 'Save changes' : 'Add expense'}
             </Button>
             {existing && (

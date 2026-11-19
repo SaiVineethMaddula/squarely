@@ -253,7 +253,8 @@ export interface ExpenseInput {
   date: string
   category: string
   split: SplitInput
-  payerMemberId: string
+  /** Who paid and how much, in paise. Must add up to amountPaise. */
+  payers: Record<string, number>
   splitAmounts: Record<string, number>
 }
 
@@ -269,7 +270,9 @@ function expenseArgs(input: ExpenseInput) {
     p_expense_date: input.date,
     p_category: input.category,
     p_split_type: input.split.type,
-    p_payers: [{ member_id: input.payerMemberId, amount_paise: input.amountPaise }],
+    p_payers: Object.entries(input.payers)
+      .filter(([, amount_paise]) => amount_paise > 0)
+      .map(([member_id, amount_paise]) => ({ member_id, amount_paise })),
     p_splits: Object.entries(input.splitAmounts).map(([member_id, amount_paise]) => ({
       member_id,
       amount_paise,
@@ -325,6 +328,37 @@ export function useDeleteSettlement(groupId: string) {
     mutationFn: async (settlementId: string) =>
       check(await supabase.rpc('delete_settlement', { p_settlement_id: settlementId })),
     onSuccess: invalidate,
+  })
+}
+
+export function useLeaveGroup(groupId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => check(await supabase.rpc('leave_group', { p_group_id: groupId })),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: keys.group(groupId) })
+      queryClient.invalidateQueries({ queryKey: keys.groups })
+    },
+  })
+}
+
+export function useRemoveMember(groupId: string) {
+  const invalidate = useInvalidateGroup(groupId)
+  return useMutation({
+    mutationFn: async (memberId: string) =>
+      check(await supabase.rpc('remove_member', { p_member_id: memberId })),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteGroup(groupId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => check(await supabase.rpc('delete_group', { p_group_id: groupId })),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: keys.group(groupId) })
+      queryClient.invalidateQueries({ queryKey: keys.groups })
+    },
   })
 }
 
